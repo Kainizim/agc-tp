@@ -70,7 +70,7 @@ def get_arguments():
     return parser.parse_args()
 
 def read_fasta(amplicon_file, minseqlen):
-    pass
+    lol
 
 
 def dereplication_fulllength(amplicon_file, minseqlen, mincount):
