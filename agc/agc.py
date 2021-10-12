@@ -23,13 +23,13 @@ from collections import Counter
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
 import nwalign3 as nw
 
-__author__ = "Your Name"
+__author__ = "Hippolyte MIZINIAK"
 __copyright__ = "Universite Paris Diderot"
-__credits__ = ["Your Name"]
+__credits__ = ["Hippolyte MIZINIAK"]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Your Name"
-__email__ = "your@email.fr"
+__maintainer__ = "Hippolyte MIZINIAK"
+__email__ = "hippolyte.miziniak@gmail.com"
 __status__ = "Developpement"
 
 
@@ -70,11 +70,30 @@ def get_arguments():
     return parser.parse_args()
 
 def read_fasta(amplicon_file, minseqlen):
-    lol
+    seq = []
+    with gzip.open(amplicon_file, "rt") as  monfich:
+        lines = monfich.readlines()
+        for i in range(1,len(lines)):
+            if str(lines[i]).startswith(">") or int(i) == len(lines)-1:
+                if len("".join(seq))>=minseqlen:
+                    yield "".join(seq)
+                seq = []
+            elif not str(lines[i]).startswith(">"):
+                seq.append(lines[i].strip())
 
 
 def dereplication_fulllength(amplicon_file, minseqlen, mincount):
-    pass
+    sequences = list(read_fasta(amplicon_file, minseqlen))
+    count = Counter()
+
+    for seq in sequences:
+        count[seq]+=1
+    
+    count_sorted = count.most_common()
+    for seq_occ in count_sorted:
+        if seq_occ[1]>=mincount:
+            yield seq_occ
+
 
 
 def get_unique(ids):
@@ -114,7 +133,20 @@ def chimera_removal(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
     pass
 
 def abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size):
-    pass
+    seq_list = dereplication_fulllength(amplicon_file, minseqlen, mincount)
+    alignment_list = []
+    otu_list = []
+    identity = get_identity(alignment_list)
+
+    for i in range(len(seq_list)):
+        for j in range(len(otu_list)):
+            alignment_list = nw.global_align(seq_list[i][0], otu_list[j][0], gap_open=-1, gap_extend=-1, matrix=os.path.abspath(os.path.join(os.path.dirname(__file__),"MATCH")))
+            if identity <= 97:
+                otu_list.append(seq_list[i][0], seq_list[i][1])
+            elif identity > 97:
+                if otu_list[j][1]<seq_list[i][1]:
+                    otu_list[j] = seq_list[i][max(j)] # remplacer l'otu par la séquence qui est le plus de fois représentée
+    return otu_list
 
 def fill(text, width=80):
     """Split text with a line return to respect fasta format"""
@@ -131,9 +163,20 @@ def main():
     Main program function
     """
     # Get arguments
-    args = get_arguments()
+    #args = get_arguments()
     # Votre programme ici
-
+    amplicon_file = "tests/test_sequences.fasta.gz"
+    minseqlen = 400
+    mincount = 10
+    chunk_size = 100
+    kmer_size = 8
+    abundance_greedy_clustering(amplicon_file, minseqlen, mincount, chunk_size, kmer_size)
+    #generator = read_fasta("tests/test_sequences.fasta.gz", minseqlen)
+    #dereplication_fulllength("data/amplicon.fasta.gz", minseqlen, mincount)
+    #Token agc : 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
+    # git add agc/agc.py
+    # git commit -m "update"
+    # git push
 
 if __name__ == '__main__':
     main()
